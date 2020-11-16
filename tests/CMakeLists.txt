@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(XML_TEST_CASE "${PROJECT_SOURCE_DIR}/xml")
+set(JSON_TEST_CASE "${PROJECT_SOURCE_DIR}/json")
 
 add_subdirectory(${XML_TEST_CASE})
-
+add_subdirectory(${JSON_TEST_CASE})
