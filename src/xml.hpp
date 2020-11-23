@@ -34,12 +34,15 @@ namespace Freedom {
         class Lexer : public AbstractLexer {
         public:
             NON_COPY_AND_MOVE_CLASS_DECL(Lexer)
-            virtual void parse(std::ifstream &s);
-            virtual std::string_view::iterator parse(std::string_view s, BasicPrologNode *root=nullptr);
 
-            BasicPrologNode take_prolog_node(std::string_view::iterator &);
-            BasicPrologNode take_data_node(std::string_view::iterator &);
-            BasicPrologNode take_node(std::string_view::iterator &i);
+            template<class T>
+            T serialize(std::string_view s);
+
+            virtual std::string_view::iterator parse(std::string_view s, PrologNode *root=nullptr);
+
+            PrologNode take_prolog_node(std::string_view::iterator &);
+            PrologNode take_data_node(std::string_view::iterator &);
+            PrologNode take_node(std::string_view::iterator &i);
         };
 
         class Parser : AbstractParser {

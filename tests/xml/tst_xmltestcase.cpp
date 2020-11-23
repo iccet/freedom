@@ -16,7 +16,7 @@ using namespace Freedom;
 #define QUOTES(arg) #arg
 #define XML_DOCUMENT(...) stringify(__VA_ARGS__)
 
-#define XML_RECT                       QUOTES(<rect><x>0</x><y>0</y><width>740</width><height>406</height></rect></node>)
+#define XML_RECT                       QUOTES(<rect><x>"0"</x><y>0</y><width>740</width><height>406</height></rect></node>)
 #define INVALID_XML_PROLOG             QUOTES(<? xml version='1.0' encoding="UTF-8"?>)
 #define XML_PROLOG                     QUOTES(<?xml version='1.0' encoding="UTF-8"?>)
 #define XML_NODE                       QUOTES(<node></node>)
@@ -29,6 +29,7 @@ using namespace Freedom;
 #define NESTED_XML_DOCUMENT            XML_DOCUMENT(XML_PROLOG, XML_RECT, XML_NODE_WITH_ATTRS)
 
 Q_DECLARE_METATYPE(std::string)
+
 
 class XmlTestCase : public QObject
 {
@@ -44,6 +45,8 @@ public:
     XmlTestCase() = default;
     ~XmlTestCase() = default;
 
+    struct XmlNode { };
+
 private slots:
     void initTestCase();
     void initTestCase_data();
@@ -51,6 +54,7 @@ private slots:
     void cleanupTestCase();
 
     void xml_lexer_test_case();
+    void xml_serializing_test_case();
     void xml_parsing_test_case();
     void xml_compressing_test_case();
     void xml_beautify_test_case();
@@ -68,15 +72,13 @@ void XmlTestCase::initTestCase_data() {
     QTest::newRow("large") << (_current_path / LARGE_FILE_PATH).string();
 }
 
-void XmlTestCase::init()
-{
+void XmlTestCase::init() {
     QFETCH_GLOBAL(std::string, path);
     _input_file_stream = std::ifstream(path);
 }
 
 void XmlTestCase::xml_lexer_test_case()
 {
-    _lexer.parse(_input_file_stream);
     _lexer.parse(EMPTY_XML_DOCUMENT);
     _lexer.parse(NESTED_XML_DOCUMENT);
 
@@ -89,25 +91,27 @@ void XmlTestCase::xml_lexer_test_case()
     qDebug() << s;
 }
 
-void XmlTestCase::xml_compressing_test_case()
-{
-    reopen(_input_file_stream, REGULAR_FILE_PATH, std::ios::in);
-}
-
-void XmlTestCase::xml_beautify_test_case()
-{
-    reopen(_input_file_stream, REGULAR_FILE_PATH, std::ios::in);
-}
-
-void XmlTestCase::xml_parsing_test_case()
-{
+void XmlTestCase::xml_parsing_test_case() {
     reopen(_input_file_stream, REGULAR_FILE_PATH, std::ios::in);
     Xml xml;
     xml.parse(_input_file_stream);
 }
 
-void XmlTestCase::cleanupTestCase()
-{
+void XmlTestCase::xml_serializing_test_case() {
+    auto node = _lexer.serialize<XmlNode>(EMPTY_XML_DOCUMENT);
+    QCOMPARE(sizeof(node), 1);
+    QCOMPARE(typeid(node), typeid(XmlNode));
+}
+
+void XmlTestCase::xml_compressing_test_case() {
+    reopen(_input_file_stream, REGULAR_FILE_PATH, std::ios::in);
+}
+
+void XmlTestCase::xml_beautify_test_case() {
+    reopen(_input_file_stream, REGULAR_FILE_PATH, std::ios::in);
+}
+
+void XmlTestCase::cleanupTestCase() {
     _input_file_stream.close();
     _beautified.close();
     _compressed.close();

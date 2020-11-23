@@ -9,49 +9,56 @@
 
 namespace Freedom
 {
+    using String = std::string;
     template<class T>
-    using Attr = std::pair<std::string, T>;
+    using Attribute = std::pair<std::string, T>;
 
     template<class ... Args>
-    using Attrs = std::vector<std::variant<Attr<Args> ...>>;
+    using Attributes = std::vector<std::variant<Attribute<Args> ...>>;
+
+    using BasicAttrs = Attributes<uint64_t, std::string>;
 
     template<class ... Args>
-    struct PrologNode {
+    struct BaseNode {
         std::string name;
-        Attrs<Args ...> attrs;
+        Attributes<Args ...> attrs;
 
-        PrologNode(std::string _name) : name(_name) { }
-        PrologNode(std::string _name, Attrs<Args ...> _attrs)
+        BaseNode(std::string _name) : name(_name) { }
+        BaseNode(std::string _name, Attributes<Args ...> _attrs)
                 : attrs {_attrs}
                 , name(_name) { }
+        virtual ~BaseNode() = default;
     };
 
     template<class ... Args> struct Node;
 
     template<class ... Args>
-    using Nodes = std::vector<Node<Args ...>>;
+    using Nodes = std::vector<BaseNode<Args ...>>;
 
     template<class ... Args>
-    struct Node : public PrologNode<Args ...> {
-        using Base = PrologNode<Args ...>;
+    struct Node : public BaseNode<Args ...> {
+        using Base = BaseNode<Args ...>;
 
+        String value;
         Nodes<Args ...> nodes;
 
         Node(std::string _name) : Base(_name) { }
-        Node(std::string _name, Attrs<Args ...> _attrs, Nodes<Args ...> _nodes)
-                : Base(_name, _attrs)
-                , nodes(_nodes) { }
+        Node(std::string _name, Attributes<Args ...> _attrs)
+                : Base(_name, _attrs) { }
     };
 
-    using BasicAttrs = Attrs<uint64_t, std::string>;
-    using BasicPrologNode = PrologNode<uint64_t, std::string>;
-    using BasicPrologNodes = std::vector<BasicPrologNode>;
+    using PrologNode = BaseNode<uint64_t, std::string>;
+    using PrologNodes = std::vector<PrologNode>;
+
+    using DataNode = Node<uint64_t, std::string>;
+    using DataNodes = std::vector<DataNode>;
+
 
     class FREEDOM_EXPORT AbstractLexer
     {
     public:
         NON_COPY_AND_MOVE_CLASS_DECL(AbstractLexer)
-        virtual std::string_view::iterator parse(std::string_view s, BasicPrologNode *root=nullptr) = 0;
+        virtual std::string_view::iterator parse(std::string_view s, PrologNode *root=nullptr) = 0;
         virtual void parse(std::ifstream &);
 
         template<class TStream>

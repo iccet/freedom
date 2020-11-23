@@ -18,7 +18,7 @@ namespace Freedom
         return std::string(begin, i);
     }
 
-    std::string take_value(std::string_view::iterator &i)
+    std::string take_attr_value(std::string_view::iterator &i)
     {
         auto v = *i++;
         if(v != Xml::Token::DoubleQuote && v != Xml::Token::Quote) throw BadXml();
@@ -27,13 +27,20 @@ namespace Freedom
         return std::string(begin, i++);
     }
 
-    Attr<std::string> take_attribute(std::string_view::iterator &i)
+    std::string take_node_value(std::string_view::iterator &i)
+    {
+        auto begin = i;
+        while (*++i != Xml::Token::Open);
+        return std::string(begin, i);
+    }
+
+    Attribute<std::string> take_attribute(std::string_view::iterator &i)
     {
         std::string name = take_word(i);
         skip_whitespace(i);
         if(*i++ != Xml::Token::Eq) throw bad_xml;
         skip_whitespace(i);
-        std::string value = take_value(i);
+        std::string value = take_attr_value(i);
 
         qDebug() << "Attribute" << name.c_str() << value.c_str();
         return std::make_pair(name, value);
@@ -50,7 +57,7 @@ namespace Freedom
         return attrs;
     }
 
-    BasicPrologNode Xml::Lexer::take_prolog_node(std::string_view::iterator &i)
+    PrologNode Xml::Lexer::take_prolog_node(std::string_view::iterator &i)
     {
         std::string name = take_word(i);
         qDebug() << "Prolog" << name.c_str();
@@ -58,49 +65,59 @@ namespace Freedom
 
         if(*++i != Token::Close) throw bad_xml;
         i++;
-        return BasicPrologNode(name, attrs);
+        return PrologNode(name, attrs);
     }
 
-    BasicPrologNode Xml::Lexer::take_data_node(std::string_view::iterator &i)
+    PrologNode Xml::Lexer::take_data_node(std::string_view::iterator &i)
     {
         std::string name = take_word(i);
         qDebug() << "Data" << name.c_str();
         BasicAttrs attrs = take_attributes(i, Token::Close);
         skip_whitespace(i);
         if(*i++ != Token::Close) throw bad_xml;
-        auto root = BasicPrologNode(name, attrs);
+        auto root = DataNode(name, attrs);
         i = parse(i, &root);
 
         return root;
     }
 
-    BasicPrologNode Xml::Lexer::take_node(std::string_view::iterator &i)
+    PrologNode Xml::Lexer::take_node(std::string_view::iterator &i)
     {
         if (*i == Token::Prolog) return take_prolog_node(++i);
-        else take_data_node(i);
+        else return take_data_node(i);
     }
 
     std::string_view::iterator
-    Xml::Lexer::parse(std::string_view s, BasicPrologNode *root)
+    Xml::Lexer::parse(std::string_view s, PrologNode *root)
     {
         char token;
         auto begin = s.begin();
         auto end = s.end();
-        BasicPrologNodes nodes;
+        auto data = dynamic_cast<DataNode*>(root);
+        auto nodes = &data->nodes;
 
         skip_whitespace(begin);
         while (begin != end && (token = *begin++) != Token::Close)
         {
             if(token == Token::Open)
             {
-                if (*begin == Token::Break) {
+                if (*begin == Token::Break)
+                {
                     auto i = begin;
                     auto name = take_word(++i);
                     if (name != root->name) throw bad_xml;
                     skip_whitespace(i);
                     begin = ++i;
                 }
-                else nodes.push_back(take_node(begin));
+                else if (root != nullptr)
+                {
+                    auto node = take_node(begin);
+                    nodes->push_back(node);
+                }
+            }
+            else if (root != nullptr)
+            {
+                data->value.append(take_node_value(begin));
             }
 
             skip_whitespace(begin);
@@ -108,10 +125,13 @@ namespace Freedom
         return begin;
     }
 
-    void
-    Xml::Lexer::parse(std::ifstream &s)
+    template<class T>
+    T
+    Xml::Lexer::serialize(std::string_view s)
     {
-
+        auto object = T();
+        parse(s);
+        return object;
     }
 
     void
